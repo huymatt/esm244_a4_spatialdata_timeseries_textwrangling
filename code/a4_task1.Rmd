@@ -1,0 +1,107 @@
+---
+title: "Task 1 - Spatial Data Visualization"
+author: "Matthieu Huy"
+date: "2023-03-14"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, echo = TRUE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(here)
+library(broom)
+library(janitor)
+
+# Spatial data packages
+library(sf)
+library(tmap)
+```
+
+For this analysis we will use two datasets:\
+
+- California Department of Fish and Wildlife. (2020) Oil Spill Incident Tracking, California, 2008 (oil_spill_incident_tracking_[ds394].csv)(accessed [here](https://gis.data.ca.gov/datasets/7464e3d6f4924b50ad06e5a553d71086_0/explore?location=36.780007%2C-119.422009%2C6.74)).\
+
+- California County shapefile (ca_counties_tiger_2016.shp) from the US Census Bureau's 2016 MAF/TIGER database (accessed [here](https://data.ca.gov/dataset/ca-geographic-boundaries/resource/b0007416-a325-4777-9295-368ea6b710e6?inner_span=True).)\
+
+
+The DFW covers all of the state of California. Each point in this dataset represents an individual oil spill incident defined as, "a discharge or threatened discharge of petroleum or other deleterious material into the waters of the state."\
+
+
+```{r}
+
+#### Download, read, and transform data
+
+### read in Oil Spill Incidents csv:
+
+oil_spills_df <- read_csv(here('data/oil_spill_incident_tracking_[ds394].csv')) %>% 
+  clean_names()
+
+#remove 00:00:00+00 from date for tmap labelling purposes
+oil_spills_df$dateofinci <- str_remove(oil_spills_df$dateofinci, "00:.+") 
+
+### read in CA county shapefile:
+ca_counties_sf <- read_sf(here('data/ca_counties/CA_Counties_TIGER2016.shp')) %>% 
+  clean_names() %>% 
+  select(namelsad, countyfp) #reorder so that county name is first column (for tmap)
+
+
+### convert oil_spills_df to sf:
+oil_spills_sf <- st_as_sf(oil_spills_df,  ### convert to sf
+                          coords = c('x', 'y'), ### specify spatial information for geometry
+                          crs = st_crs(ca_counties_sf)) ### set coord system same as county_sf
+```
+
+```{r plot1, results = 'asis', out.width = "100%", fig.align = 'center', fig.cap = "**Figure 1: Oil spill incidents throughout California counties in 2008.** Points represent individual oil spill events."}
+
+tmap_mode(mode = "view") ### set mode to view/interactive
+
+plot1 <- tm_shape(ca_counties_sf) + ### county polygons
+      tm_borders("lightgrey", lwd = 0.5) + ###border color and width
+  tm_shape(oil_spills_sf) + ### oil spill points
+  tm_dots(id = "dateofinci", ### label with dates instead of point id number
+          col = "darkcyan", ### color points
+          size = 0.005) ### size of points
+
+tmap_leaflet(plot1) ### render plot1 tmap
+```
+\
+\
+\
+```{r, fig.align = 'center', out.width = "100%"}
+
+### perform spatial join of oil_spills_sf to ca_counties_sf
+county_oil_spills_sf <- ca_counties_sf %>% 
+  st_join(oil_spills_sf) %>% 
+  filter(inlandmari %in% c("Inland")) #keep only inland oil spills
+
+###check for NA values
+#sum(is.na(county_oil_spills_sf$oesnumber)) 
+###no NA values
+
+###count number of oil spill observations for each county
+oil_spill_counts_sf <- county_oil_spills_sf %>% 
+  count(namelsad)
+
+legend_breaks <- c("25","50","75","100","125","150","175","200+")
+
+ggplot() +
+  geom_sf(data = ca_counties_sf, #to fill missing county in top right corner of map
+          aes(color = "lightgrey"),
+          color = "white",
+          size = 0.1) +
+  geom_sf(data = oil_spill_counts_sf,
+          aes(fill = n,),
+          color = "white",
+          size = 0.1) +
+  scale_fill_stepsn(limits = c(0, 220), breaks = c(20, 40, 60, 80, 100, 120, 140, 160, 180, 200), 
+                    labels = c("20", "40", "60", "80", "100", "120", "140", "160", "180", "200+"),
+                    colors = hcl.colors(8, palette = "Inferno", rev = TRUE)) +
+  theme_void() +
+  labs(fill = "",
+       title = "Figure 2: Number of oil spill events in California counties in 2008") +
+  theme(plot.title = element_text(size = 10, color = "black", face = "bold"),
+        legend.title = element_text(size = 10))
+```
+
