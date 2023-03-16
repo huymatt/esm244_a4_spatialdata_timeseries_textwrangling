@@ -1,0 +1,97 @@
+---
+title: "**Task 2: <br> Willamette Falls Fish Passage Time Series Summary**"
+author: "Matthieu Huy"
+date: "2023-03-16"
+output: 
+  html_document:
+    code_folding: hide
+    theme: journal
+---
+
+```{r setup, include=TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(here)
+library(broom)
+
+# Time series packages
+library(tsibble)
+library(feasts)
+library(lubridate)
+library(fable)
+
+```
+
+## Overview {.tabset .tabset-fade .tabset-pills}
+
+![](/Users/matthuy/Desktop/Rprojects/ESM 244/esm244_a4_spatialdata_timeseries_textwrangling/falls.png)
+
+An aerial view of Willamette Falls and the former Blue Heron paper mill. *The Oregonian*\
+\
+Located about 10 miles south of Portland, Oregon on the Willamette River, Willamette Falls is the largest waterfall in the Northwestern United States. Despite a complicated industrial past, the falls have been a native salmon and lamprey fishery for thousands of years and see many more species of fish pass through since the first fish ladder was constructed in 1885. [The Oregon Department of Fish and WIldlife](https://myodfw.com/willamette-falls-fish-counts) maintains a fish counting station at Willamette Falls, allowing biologists to monitor populations over time.
+
+![](/Users/matthuy/Desktop/Rprojects/ESM 244/esm244_a4_spatialdata_timeseries_textwrangling/ladder.png)
+
+*Aerial View of Willamette Falls*. 2010. *Escapement Estimate of Adult Pacific Lamprey at Willamette Falls*. by Baker, C., J. Graham, Confederate Tribes of the Warm Springs Reservation. Oregon Department of Fish and Wildlife. 2010. p. 4.\
+
+For this time series analysis we will use adult fish count data, recorded from 2001-01-01 to 2010-12-31. This data includes daily observations of 13 different fish species that pass through the Willamette Falls fish ladder. This data was shared by and accessed from [Columbia River DART (Data Access in Real Time)](https://www.cbr.washington.edu/dart/wrapper?type=html&fname=metainventory_WFF.html), part of the Colombia Basin Research project at University of Washington's School of Aquatic & Fisheries Management.\
+\
+
+### Original time series
+
+```{r}
+
+### read in fish count data
+fish_df <- read_csv(here("data/willamette_fish_passage.csv")) %>% 
+  janitor::clean_names() %>% 
+  mutate(date = as.Date(date, format = "%m/%d/%y")) ###change date col from haracter to date class
+
+fish_df[is.na(fish_df)] <- 0 ### replace NA's with 0 
+
+fish_ts <- as_tsibble(fish_df, key = NULL, index = date) %>% ### change data frame to tsibble
+  select(date, coho, jack_coho, steelhead) ### select date and species of interest
+
+coho_plot <- ggplot(data = fish_ts,
+       aes(x = date)) +
+  geom_line(aes(y = coho),
+            color = "darksalmon") +
+  labs(x = " ",
+       y = " ") +
+  theme_minimal()
+
+steel_plot <- ggplot(data = fish_ts,
+       aes(x = date)) +
+  geom_line(aes(y = steelhead),
+            color = "darkseagreen") +
+  labs(x = "",
+       y = "") +
+  theme_minimal()
+
+jcoho_plot <- ggplot(data = fish_ts,
+       aes(x = date)) +
+  geom_line(aes(y = jack_coho),
+            color = "azure3") +
+  labs(x = "Date",
+       y = "") +
+  theme_minimal()
+
+
+  
+
+  
+cowplot::plot_grid(coho_plot, steel_plot, jcoho_plot,
+                   labels = c(" Coho    ", "Steelhead", "Jack Coho"), 
+                   vjust=-0.5,
+                   hjust = -0.2,
+                   ncol = 1) +
+  theme(plot.margin = unit(c(1, 0, 0, 0), "cm"))
+
+```
+
+
+### Seasonplots
+
+
+
+### Annual counts by species
+
