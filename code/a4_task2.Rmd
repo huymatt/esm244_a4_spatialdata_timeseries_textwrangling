@@ -72,7 +72,7 @@ coho_plot <- ggplot(data = fish_ts,
 jcoho_plot <- ggplot(data = fish_ts,
        aes(x = date)) +
   geom_line(aes(y = jack_coho),
-            color = "azure3") +
+            color = "slategray2") +
   labs(x = "Date",
        y = "") +
   theme_minimal()
@@ -83,7 +83,7 @@ steel_plot <- ggplot(data = fish_ts,
             color = "darkseagreen") +
   labs(x = "Date",
        y = "",
-       caption = "**Figure 1:<span style = 'color:black;'> Count of adult passage for <span style = 'color:darksalmon;'>coho, <span style = 'color:azure3;'> jack coho, <span style = 'color:darkseagreen;'> and steelhead salmon <span style = 'color:black;'> through the<br> Willamette Falls fish ladder. (01-01-2001 to 12-31-2010)**") +
+       caption = "**Figure 1:<span style = 'color:black;'> Count of adult passage for <span style = 'color:darksalmon;'>coho, <span style = 'color:slategray2;'> jack coho, <span style = 'color:darkseagreen;'> and steelhead salmon <span style = 'color:black;'> through the<br> Willamette Falls fish ladder. (01-01-2001 to 12-31-2010)**") +
   theme_minimal() +
   theme(plot.caption = element_markdown(hjust = -1, color = "black",
                                     size = 10, halign = -0.004))
@@ -135,14 +135,14 @@ jcoho_season_plot <- jcoho_ts %>%
   labs(x = "",
        y = "") +
   scale_color_gradientn(labels = c("2000", "2002", "2005", "2007", "2010"),
-                        colors = c("gray90", "gray70", "gray50", "gray30", "gray10"))
+                        colors = c("lightcyan1", "lightcyan3", "slategray2", "slategray3", "slategray4"))
 
 steel_season_plot <- steel_ts %>% 
   gg_season(y = steelhead,
             alpha = 0.8) +
   labs(x = "Month",
        y = "",
-       caption = "**Figure 2:<span style = 'color:black;'> Seasonal adult passage for <span style = 'color:darksalmon;'>coho, <span style = 'color:gray50;'> jack coho, <span style = 'color:darkseagreen;'> and steelhead salmon <span style = 'color:black;'> through the<br> Willamette Falls fish ladder. Lines represent individual years from 2001 to 2010.**") +
+       caption = "**Figure 2:<span style = 'color:black;'> Seasonal adult passage for <span style = 'color:darksalmon;'>coho, <span style = 'color:slategray2;'> jack coho, <span style = 'color:darkseagreen;'> and steelhead salmon <span style = 'color:black;'> through the<br> Willamette Falls fish ladder. Lines represent individual years from 2001 to 2010.**") +
   theme_minimal() +
   theme(plot.caption = element_markdown(hjust = 1, color = "black",
                                     size = 10, halign = -0.004)) +
@@ -169,9 +169,56 @@ cowplot::plot_grid(coho_season_plot, jcoho_season_plot, steel_season_plot,
 ### Annual counts by species
 
 ```{r}
-coho_ts_yearly <- coho_ts %>% 
-  group_by(year = year(date)) %>% 
-  summarise(total = sum(coho))
+fish_df_yearly <- as.data.frame(fish_ts) %>% 
+  pivot_longer(2:4, names_to = "species") %>% 
+  mutate(year = year(date)) %>% 
+  group_by(year, species) %>% 
+  summarise(total = sum(value)) %>% 
+  ungroup()
 
+ggplot() +
+  geom_col(data = fish_df_yearly,
+       aes(x = year,
+           y = total,
+           fill = species),
+       position = "stack",
+       width = 0.5,
+       alpha = 0.3) +
+  geom_line(data = fish_df_yearly,
+       aes(x = year,
+           y = total,
+           color = species),
+       size = 1) +
+  labs(x = "Year",
+       y = "Number of Adult Passages",
+       fill = " ",
+       color = " ",
+       caption = "**Figure 3:<span style = 'color:black;'> Yearly total counts of adult passages for <span style = 'color:darksalmon;'>coho, <span style = 'color:slategray2;'> jack coho, <span style = 'color:darkseagreen;'> and steelhead salmon <span style = 'color:black;'><br> through the Willamette Falls fish ladder (2001 - 2010).**") +
+  scale_fill_manual(values = c("darksalmon", "slategray2", "darkseagreen"),    
+                    labels = c("Coho", "Jack Coho", "Steelhead")) +
+  scale_color_manual(values = c("darksalmon", "slategray2", "darkseagreen"),       
+                    labels = c("Coho", "Jack Coho", "Steelhead")) +    
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10),                     
+                     limits = c(2000.5, 2010.5),                                   
+                     expand = c(0,0)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 8),         
+                     labels = scales::comma,                            
+                     limits = c(0, 56000),                                      
+                     expand = c(0,0)) + 
+  theme_minimal() +
+  theme(plot.caption = element_markdown(hjust = 0.5, color = "black",
+                                    size = 10, halign = -0.002),
+        axis.text = element_text(color = "black", size = 8),                   #fonts/font size
+        axis.title.x = element_text(color = "black", size = 10),  
+        axis.title.y = element_text(color = "black", size = 10, vjust = 2))
+  
+  
 ```
+\
+
+- From Figure 3, we see that the number of adult coho salmon passing through Willamette Falls has increased substaintially since 2008.
+
+- The number of Steelhead salmon pasing through Willamette Falls has been decreasing, but jumped back up from 2009 to 2010.
+
+- There are much less Jack Coho salmon passing through Willamette Falls than the other two species, but their numbers appear relatively stable. Interestingly, the number of coho salmon was similar to that of jack coho salmon until 2008, when the number of coho salmon grew substantially while the number of jack coho salmon remained low.
 

@@ -1,0 +1,76 @@
+---
+title: "Task 3 - Text Wrangling and Analysis"
+author: "Matthieu Huy"
+date: "2023-03-16"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(here)
+library(tidytext)
+library(textdata)
+library(pdftools)
+library(ggwordcloud)
+```
+
+```{r}
+ipcc_text <- pdf_text(here('data/ipcc.pdf'))
+
+ipcc_lines <- data.frame(ipcc_text) %>% 
+  mutate(text_full = str_split(ipcc_text, pattern = '\\n')) %>% ### breaks up full page string into individual lines based on pattern "/n" at the end of each line
+  unnest(text_full) %>% ### turns each line, which we split, into its own row of the data frame
+  mutate(text_full = str_trim(text_full)) ### eliminate excess spaces
+
+ipcc_sections <- ipcc_lines %>% 
+  slice(-(1:456)) %>% 
+  mutate(section = ifelse(str_detect(text_full, ("B:|C:|D:")), text_full, NA)) %>% 
+  fill(section, .direction = 'down') %>% ### fill rest of column with extracted sections
+  separate(col = section, into = c("section", "title"), sep = ":")
+
+ipcc_words <- ipcc_sections %>% 
+  unnest_tokens(word, text_full) %>% 
+  select(-ipcc_text) %>% 
+  anti_join(stop_words, by = 'word')
+
+ipcc_wordcounts <- ipcc_words %>% 
+  count(section, word) %>% 
+  arrange(-n) %>% 
+  filter(! word %in% c("climate", "global", "ccb", "box"))
+
+top_10_words <- ipcc_wordcounts %>% 
+  group_by(section) %>% 
+  arrange(-n) %>% 
+  slice(1:10) %>% 
+  ungroup()
+
+section_labels <- c("Impacts and Risks", "Adaptation", "Resilient Development")
+
+ggplot(data = top_10_words,
+       aes(x = n,
+           y = word)) +
+  geom_col(fill = "coral") +
+  facet_wrap(~section,
+             scales = "free") +
+  labs(x = "wordcount",
+       caption = "Figure 1: Most frequently used words in each section of 2022 IPCC Climate Change Report.") +
+  theme_minimal() +
+  theme(axis.text = element_text(color = "black", size = 10),                   
+        axis.title.x = element_text(color = "black", size = 10, face = "bold"),  
+        axis.title.y = element_text(color = "black", size = 10, face = "bold",
+                                    vjust = 2),           
+        plot.caption = element_text(hjust = 7, color = "black",
+                                    size = 10, face = "bold"))
+
+```
+
+```{r}
+sectionD_top100 <- ipcc_wordcounts %>% 
+  filter(section %in% c("D")) %>% 
+  arrange(-n) %>% 
+  slice(1:100)
+```
+
