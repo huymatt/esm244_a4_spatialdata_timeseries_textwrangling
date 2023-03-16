@@ -1,5 +1,5 @@
 ---
-title: "**Task 2: <br> Willamette Falls Fish Passage Time Series Summary**"
+title: "<span style='font-size: 30px'>**Task 2: <br> Willamette Falls Fish Passage Time Series Summary**"
 author: "Matthieu Huy"
 date: "2023-03-16"
 output: 
@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(tidyverse)
 library(here)
 library(broom)
+library(ggtext)
 
 # Time series packages
 library(tsibble)
@@ -24,15 +25,21 @@ library(fable)
 
 ## Overview {.tabset .tabset-fade .tabset-pills}
 
-![](/Users/matthuy/Desktop/Rprojects/ESM 244/esm244_a4_spatialdata_timeseries_textwrangling/falls.png)
+```{r, out.width = "1000px", fig.align = "center"}
+knitr::include_graphics("/Users/matthuy/Desktop/Rprojects/ESM 244/esm244_a4_spatialdata_timeseries_textwrangling/falls.png")
+```
+
 
 An aerial view of Willamette Falls and the former Blue Heron paper mill. *The Oregonian*\
 \
 Located about 10 miles south of Portland, Oregon on the Willamette River, Willamette Falls is the largest waterfall in the Northwestern United States. Despite a complicated industrial past, the falls have been a native salmon and lamprey fishery for thousands of years and see many more species of fish pass through since the first fish ladder was constructed in 1885. [The Oregon Department of Fish and WIldlife](https://myodfw.com/willamette-falls-fish-counts) maintains a fish counting station at Willamette Falls, allowing biologists to monitor populations over time.
+\
+```{r, out.width = "800px", fig.align = "left"}
+knitr::include_graphics("/Users/matthuy/Desktop/Rprojects/ESM 244/esm244_a4_spatialdata_timeseries_textwrangling/ladder.png")
+```
 
-![](/Users/matthuy/Desktop/Rprojects/ESM 244/esm244_a4_spatialdata_timeseries_textwrangling/ladder.png)
-
-*Aerial View of Willamette Falls*. 2010. *Escapement Estimate of Adult Pacific Lamprey at Willamette Falls*. by Baker, C., J. Graham, Confederate Tribes of the Warm Springs Reservation. Oregon Department of Fish and Wildlife. 2010. p. 4.\
+*Aerial View of Willamette Falls*. 2010. *Escapement Estimate of Adult Pacific Lamprey at Willamette Falls*. by Baker, C.,<br> J. Graham, Confederate Tribes of the Warm Springs Reservation. Oregon Department of Fish and Wildlife. 2010. p. 4.\
+\
 
 For this time series analysis we will use adult fish count data, recorded from 2001-01-01 to 2010-12-31. This data includes daily observations of 13 different fish species that pass through the Willamette Falls fish ladder. This data was shared by and accessed from [Columbia River DART (Data Access in Real Time)](https://www.cbr.washington.edu/dart/wrapper?type=html&fname=metainventory_WFF.html), part of the Colombia Basin Research project at University of Washington's School of Aquatic & Fisheries Management.\
 \
@@ -51,20 +58,15 @@ fish_df[is.na(fish_df)] <- 0 ### replace NA's with 0
 fish_ts <- as_tsibble(fish_df, key = NULL, index = date) %>% ### change data frame to tsibble
   select(date, coho, jack_coho, steelhead) ### select date and species of interest
 
+
+### create static time series graphs
+
 coho_plot <- ggplot(data = fish_ts,
        aes(x = date)) +
   geom_line(aes(y = coho),
             color = "darksalmon") +
   labs(x = " ",
        y = " ") +
-  theme_minimal()
-
-steel_plot <- ggplot(data = fish_ts,
-       aes(x = date)) +
-  geom_line(aes(y = steelhead),
-            color = "darkseagreen") +
-  labs(x = "",
-       y = "") +
   theme_minimal()
 
 jcoho_plot <- ggplot(data = fish_ts,
@@ -75,23 +77,101 @@ jcoho_plot <- ggplot(data = fish_ts,
        y = "") +
   theme_minimal()
 
+steel_plot <- ggplot(data = fish_ts,
+       aes(x = date)) +
+  geom_line(aes(y = steelhead),
+            color = "darkseagreen") +
+  labs(x = "Date",
+       y = "",
+       caption = "**Figure 1:<span style = 'color:black;'> Count of adult passage for <span style = 'color:darksalmon;'>coho, <span style = 'color:azure3;'> jack coho, <span style = 'color:darkseagreen;'> and steelhead salmon <span style = 'color:black;'> through the<br> Willamette Falls fish ladder. (01-01-2001 to 12-31-2010)**") +
+  theme_minimal() +
+  theme(plot.caption = element_markdown(hjust = -1, color = "black",
+                                    size = 10, halign = -0.004))
 
-  
 
+### arrange in a panel with cowplot
   
-cowplot::plot_grid(coho_plot, steel_plot, jcoho_plot,
-                   labels = c(" Coho    ", "Steelhead", "Jack Coho"), 
+cowplot::plot_grid(coho_plot, jcoho_plot, steel_plot,
+                   labels = c(" Coho    ", "Jack Coho", "Steelhead"), 
                    vjust=-0.5,
                    hjust = -0.2,
                    ncol = 1) +
   theme(plot.margin = unit(c(1, 0, 0, 0), "cm"))
 
 ```
+\
 
+- All three species follow clear seasonal trends, with coho and jack coho passage overlapping their seasonality.\
+
+- Overall increasing trend in Coho salmon populations, especially in the last two years. Steelhead populations appear to be slightly decreasing over time. There is no apparent overall trend in jack coho populations.\
+
+- 2008 stands out as an outlier in the jack coho passage data; there were nearly double the amount of jack coho salmon that year compared to any other year.\
 
 ### Seasonplots
 
+```{r}
+coho_ts <- fish_ts %>% 
+  select(date, coho)
+
+jcoho_ts <- fish_ts %>% 
+  select(date, jack_coho)
+
+steel_ts <- fish_ts %>% 
+  select(date, steelhead)
+
+coho_season_plot <- coho_ts %>% 
+  gg_season(y = coho,
+            alpha = 0.8) +
+  theme_minimal() +
+  labs(x = "",
+       y = "") +
+  scale_color_gradientn(labels = c("2000", "2002", "2005", "2007", "2010"),
+                        colors = c("lightsalmon", "salmon2", "tomato3", "indianred4", "salmon4"))
+
+jcoho_season_plot <- jcoho_ts %>% 
+  gg_season(y = jack_coho,
+            alpha = 0.8) +
+  theme_minimal() +
+  labs(x = "",
+       y = "") +
+  scale_color_gradientn(labels = c("2000", "2002", "2005", "2007", "2010"),
+                        colors = c("gray90", "gray70", "gray50", "gray30", "gray10"))
+
+steel_season_plot <- steel_ts %>% 
+  gg_season(y = steelhead,
+            alpha = 0.8) +
+  labs(x = "Month",
+       y = "",
+       caption = "**Figure 2:<span style = 'color:black;'> Seasonal adult passage for <span style = 'color:darksalmon;'>coho, <span style = 'color:gray50;'> jack coho, <span style = 'color:darkseagreen;'> and steelhead salmon <span style = 'color:black;'> through the<br> Willamette Falls fish ladder. Lines represent individual years from 2001 to 2010.**") +
+  theme_minimal() +
+  theme(plot.caption = element_markdown(hjust = 1, color = "black",
+                                    size = 10, halign = -0.004)) +
+  scale_color_gradientn(labels = c("2000", "2002", "2005", "2007", "2010"),
+                        colors = c("paleturquoise1", "paleturquoise3", "darkseagreen1", "darkseagreen3", "darkseagreen4"))
+
+cowplot::plot_grid(coho_season_plot, jcoho_season_plot, steel_season_plot,
+                   labels = c(" Coho    ", "Jack Coho", "Steelhead"), 
+                   vjust=-0.5,
+                   hjust = -0.2,
+                   ncol = 1) +
+  theme(plot.margin = unit(c(1, 0, 0, 0), "cm"))
+
+```
+\
+
+- Coho and Jack Coho adult passages peak from September to November.\
+
+- Steelhead adult passages are more spread out than coho and jack coho, happening from January to August and peaking around June and July.\
+
+- These season plots appear to support our observations in Figure 1 that coho salmon populations have increased over time (darker colors indicate more recent years), while steelhead salom populations have decreased (darker green colors indicate more recent years). Jack Coho populations appear relatively stable, aside from an unusually high year in 2008.\
 
 
 ### Annual counts by species
+
+```{r}
+coho_ts_yearly <- coho_ts %>% 
+  group_by(year = year(date)) %>% 
+  summarise(total = sum(coho))
+
+```
 
