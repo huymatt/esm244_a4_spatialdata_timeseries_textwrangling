@@ -17,6 +17,18 @@ library(pdftools)
 library(ggwordcloud)
 ```
 
+For the purpose of this text analysis, I will use the Summary for policymakers of the IPCC Sixth Assessment Report on Climate Change (2022). This report is divided into an introduction and three sections. The first section (section B) assesses the impacts of climate change, including risks to ecosystems, biodiversity, and human communities on a global and regional scale. Section C looks at potential and the capacity for the natural world and human societies to adapt to climate change. Section D, the last section, looks at prospects for development in a way that fosters climate resilience.\
+
+I will observe the frequency and sentiment of words used in each of these three sections.\
+
+**Citation:**
+IPCC, 2022: Summary for Policymakers [H.-O. Pörtner, D.C. Roberts, E.S. Poloczanska, K. Mintenbeck, M. Tignor,
+A. Alegría, M. Craig, S. Langsdorf, S. Löschke, V. Möller, A. Okem (eds.)]. In: Climate Change 2022: Impacts, Adaptation
+and Vulnerability. Contribution of Working Group II to the Sixth Assessment Report of the Intergovernmental Panel
+on Climate Change [H.-O. Pörtner, D.C. Roberts, M. Tignor, E.S. Poloczanska, K. Mintenbeck, A. Alegría, M. Craig,
+S. Langsdorf, S. Löschke, V. Möller, A. Okem, B. Rama (eds.)]. Cambridge University Press, Cambridge, UK and New York,
+NY, USA, pp. 3–33, doi:10.1017/9781009325844.001.
+
 ```{r}
 ipcc_text <- pdf_text(here('data/ipcc.pdf'))
 
