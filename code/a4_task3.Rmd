@@ -68,9 +68,45 @@ ggplot(data = top_10_words,
 ```
 
 ```{r}
-sectionD_top100 <- ipcc_wordcounts %>% 
-  filter(section %in% c("D")) %>% 
+sectionB_top100 <- ipcc_wordcounts %>% 
+  filter(section %in% c("B")) %>% 
   arrange(-n) %>% 
   slice(1:100)
+
+sectionB_cloud <- ggplot(data = sectionB_top100, aes(label = word)) +
+  geom_text_wordcloud(aes(color = n, size = n), shape = "diamond") +
+  scale_size_area(max_size = 6) +
+  scale_color_gradientn(colors = c("darkgoldenrod1","darkorange","red")) +
+  theme_minimal()
+
+sectionB_cloud
+```
+
+
+```{r}
+ipcc_nrc <- ipcc_wordcounts %>% 
+  inner_join(get_sentiments("nrc"))
+
+ipcc_nrc_counts <- ipcc_nrc %>% 
+  count(section, sentiment)
+
+ggplot(data = ipcc_nrc_counts, 
+       aes(x = n, 
+           y = sentiment)) +
+  geom_col(fill = "slategray3") +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 6),             #x axis breaks
+                     limits = c(0, 180),                             #x axis range
+                     expand = c(0,0)) +
+  facet_wrap(~section) +
+  labs(x = "wordcount",
+       caption = "Figure 2: Sentiment of words in each section of 2022 IPCC Climate Change Report.") +
+  theme_minimal() +
+  theme(axis.text = element_text(color = "black", size = 10),                   
+        axis.title.x = element_text(color = "black", size = 10, face = "bold"),  
+        axis.title.y = element_text(color = "black", size = 10, face = "bold",
+                                    vjust = 2),           
+        plot.caption = element_text(hjust = -2, color = "black",
+                                    size = 10, face = "bold"))
+
 ```
 
