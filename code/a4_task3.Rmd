@@ -17,107 +17,149 @@ library(pdftools)
 library(ggwordcloud)
 ```
 
-For the purpose of this text analysis, I will use the Summary for policymakers of the IPCC Sixth Assessment Report on Climate Change (2022). This report is divided into an introduction and three sections. The first section (section B) assesses the impacts of climate change, including risks to ecosystems, biodiversity, and human communities on a global and regional scale. Section C looks at potential and the capacity for the natural world and human societies to adapt to climate change. Section D, the last section, looks at prospects for development in a way that fosters climate resilience.\
+```{r, out.width = "400px", fig.align = "center"}
+knitr::include_graphics("/Users/matthuy/Desktop/Rprojects/ESM 244/esm244_a4_spatialdata_timeseries_textwrangling/kite_cover.jpg")
+```
 
-I will observe the frequency and sentiment of words used in each of these three sections.\
+For the purpose of this text analysis, I will use one of my favorite novels, *The Kite Runner.*  Afghan-American author Khaled Hosseini's first novel is a coming-of-age story following the maturation of Amir, an Afghan male, through Afghanistan's tumultuous recent history. It showcases life in Afghanistan prior to the soviet invasion, under soviet occupation, under Taliban rule, and under U.S. occupation. Inspired by Hosseini's own experiences and family heritage, the novel explores themes such as class division, betrayal, religion, growing up, and similarities and differences between American and Afghan culture. For someone such as myself who knew very little about Afghanistan prior to reading the novel, *The Kite Runner.* shed light on the rich culture and people of a country that is often reduced down to its leaders (the Taliban), and associated terrorist groups. \
+
+In this analysis, I will observe the frequency and sentiment of words used in each chapter and the novel overall.\
 
 **Citation:**
-IPCC, 2022: Summary for Policymakers [H.-O. Pörtner, D.C. Roberts, E.S. Poloczanska, K. Mintenbeck, M. Tignor,
-A. Alegría, M. Craig, S. Langsdorf, S. Löschke, V. Möller, A. Okem (eds.)]. In: Climate Change 2022: Impacts, Adaptation
-and Vulnerability. Contribution of Working Group II to the Sixth Assessment Report of the Intergovernmental Panel
-on Climate Change [H.-O. Pörtner, D.C. Roberts, M. Tignor, E.S. Poloczanska, K. Mintenbeck, A. Alegría, M. Craig,
-S. Langsdorf, S. Löschke, V. Möller, A. Okem, B. Rama (eds.)]. Cambridge University Press, Cambridge, UK and New York,
-NY, USA, pp. 3–33, doi:10.1017/9781009325844.001.
+Hosseini, Khaled. *The Kite Runner*. Cambridge University Press, 2006. 
 
 ```{r}
-ipcc_text <- pdf_text(here('data/ipcc.pdf'))
+kite_runner_text <- pdf_text(here('data/kite_runner.pdf'))
 
-ipcc_lines <- data.frame(ipcc_text) %>% 
-  mutate(text_full = str_split(ipcc_text, pattern = '\\n')) %>% ### breaks up full page string into individual lines based on pattern "/n" at the end of each line
-  unnest(text_full) %>% ### turns each line, which we split, into its own row of the data frame
+kr_lines <- data.frame(kite_runner_text) %>% 
+  mutate(page = 1:n()) %>%
+  mutate(text_full = str_split(kite_runner_text, pattern = '\\n')) %>%  ### breaks up full page string into individual lines based on pattern "\n" at the end of each line
+  unnest(text_full) %>%  ### turns each line, which we split, into its own row of the data frame
   mutate(text_full = str_trim(text_full)) ### eliminate excess spaces
 
-ipcc_sections <- ipcc_lines %>% 
-  slice(-(1:456)) %>% 
-  mutate(section = ifelse(str_detect(text_full, ("B:|C:|D:")), text_full, NA)) %>% 
-  fill(section, .direction = 'down') %>% ### fill rest of column with extracted sections
-  separate(col = section, into = c("section", "title"), sep = ":")
+chapts <- c("TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|ELEVEN|TWELVE|THIRTEEN|FOURTEEN|FIFTEEN|SIXTEEN|SEVENTEEN|EIGHTEEN|NINETEEN|TWENTY|TWENTY-ONE|TWENTY-TWO|TWENTY-THREE|TWENTY-FOUR|TWENTY-FIVE")
 
-ipcc_words <- ipcc_sections %>% 
+kr_chapts <- kr_lines %>% 
+  slice(-(1:68)) %>% 
+  mutate(chapter = ifelse(str_detect(text_full, chapts), text_full, NA)) %>% 
+  fill(chapter, .direction = 'down') %>% #fill rest of column with extracted chapter until next chapter is reached
+  mutate(chapter = str_to_title(chapter))
+
+kr_words <- kr_chapts %>% 
   unnest_tokens(word, text_full) %>% 
-  select(-ipcc_text) %>% 
+  select(-kite_runner_text) %>% 
   anti_join(stop_words, by = 'word')
 
-ipcc_wordcounts <- ipcc_words %>% 
-  count(section, word) %>% 
-  arrange(-n) %>% 
-  filter(! word %in% c("climate", "global", "ccb", "box"))
+kr_wordcounts <- kr_words %>% 
+  count(chapter, word) %>% 
+  filter(! word %in% c("soraya", "baba", "baba's", "khan", "rahim", "amir", "sohrab's", "sohrab", "hassan", "hassan's", "assef", "assef's", "farid", "karim", "ali"))
+#remove names of characters
 
-top_10_words <- ipcc_wordcounts %>% 
-  group_by(section) %>% 
+top_5_words <- kr_wordcounts %>% 
+  group_by(chapter) %>% 
   arrange(-n) %>% 
   slice(1:10) %>% 
-  ungroup()
+  ungroup() %>% 
+  filter(chapter %in% c("Two", "Five", "Eight", "Eleven", "Fourteen", "Eighteen", "Twenty-two", "Twenty-five"))
 
-section_labels <- c("Impacts and Risks", "Adaptation", "Resilient Development")
-
-ggplot(data = top_10_words,
+ggplot(data = top_5_words,
        aes(x = n,
            y = word)) +
   geom_col(fill = "coral") +
-  facet_wrap(~section,
+  facet_wrap(~chapter,
              scales = "free") +
   labs(x = "wordcount",
-       caption = "Figure 1: Most frequently used words in each section of 2022 IPCC Climate Change Report.") +
+       caption = "Figure 1: Most frequently used words in each chapter of The Kite Runner") +
   theme_minimal() +
-  theme(axis.text = element_text(color = "black", size = 10),                   
-        axis.title.x = element_text(color = "black", size = 10, face = "bold"),  
+  theme(axis.text = element_text(color = "black", size = 10),
+        axis.title.x = element_text(color = "black", size = 10, face = "bold"),
         axis.title.y = element_text(color = "black", size = 10, face = "bold",
-                                    vjust = 2),           
-        plot.caption = element_text(hjust = 7, color = "black",
+                                    vjust = 2),
+        plot.caption = element_text(hjust = -0.5, color = "black",
                                     size = 10, face = "bold"))
 
 ```
 
 ```{r}
-sectionB_top100 <- ipcc_wordcounts %>% 
-  filter(section %in% c("B")) %>% 
+kr_top100 <- kr_words %>% 
+  count(word) %>% 
   arrange(-n) %>% 
+  filter(! word %in% c("soraya", "baba", "baba's", "khan", "rahim", "amir", "sohrab's", "sohrab", "hassan", "hassan's", "assef", "assef's", "farid", "karim", "ali")) %>% 
   slice(1:100)
 
-sectionB_cloud <- ggplot(data = sectionB_top100, aes(label = word)) +
+kr_cloud <- ggplot(data = kr_top100, aes(label = word)) +
   geom_text_wordcloud(aes(color = n, size = n), shape = "diamond") +
   scale_size_area(max_size = 6) +
-  scale_color_gradientn(colors = c("darkgoldenrod1","darkorange","red")) +
-  theme_minimal()
+  scale_color_gradientn(colors = c("forestgreen","darkgoldenrod2","brown2")) +
+  labs(caption = "Figure 2: Word cloud of the 100 most frequent words in The Kite Runner.") +
+  theme_minimal() +
+  theme( plot.caption = element_text(hjust = 0, color = "black",
+                                    size = 10, face = "bold"))
+  
 
-sectionB_cloud
+kr_cloud
 ```
 
+```{r}
+afinn_lex <- get_sentiments(lexicon = "afinn")
+
+kr_afinn <- kr_words %>% 
+  inner_join(afinn_lex, by = 'word')
+
+# Find the mean afinn score by chapter: 
+afinn_means <- kr_afinn %>% 
+  group_by(chapter) %>% 
+  summarize(mean_afinn = mean(value)) %>% 
+  ungroup() %>% 
+  filter(!row_number() %in% c(8, 16, 17, 18, 19, 20, 23)) %>% 
+  mutate(ch = c(8, 18, 11, 15, 5, 4, 14, 9, 19, 7, 17, 6, 16, 10, 13, 3, 12, 20, 25, 24, 21, 23, 22, 2)) %>% 
+  arrange(ch) %>% 
+  mutate(ch = as.factor(ch))
+
+ggplot(data = afinn_means, 
+       aes(x = ch,
+           y = mean_afinn)) +
+  geom_col(fill = "slategray3") +
+  labs(x = "Chapter",
+       y = "Mean afinn lexicon score",
+       caption = "Figure 3: Sentiment of words in each section of 2022 IPCC Climate Change Report.") +
+  theme_minimal() +
+  theme(axis.text = element_text(color = "black", size = 10),                   
+        axis.title.x = element_text(color = "black", size = 10, face = "bold"),  
+        axis.title.y = element_text(color = "black", size = 10, face = "bold",
+                                    vjust = 2),           
+        plot.caption = element_text(hjust = -0.55, color = "black",
+                                    size = 10, face = "bold"))
+```
+\
+
+#### Analysis:
+Looks like pretty negative sentiment throughout most of the novel. This makes sense given the setting in war-torn Afghanistan.
 
 ```{r}
-ipcc_nrc <- ipcc_wordcounts %>% 
+kr_nrc <- kr_wordcounts %>% 
   inner_join(get_sentiments("nrc"))
 
-ipcc_nrc_counts <- ipcc_nrc %>% 
-  count(section, sentiment)
+kr_nrc_counts <- kr_nrc %>% 
+  count(chapter, sentiment) %>% 
+  filter(chapter %in% c("Two", "Five", "Eight", "Eleven", "Fourteen", "Eighteen", "Twenty-two", "Twenty-five")) 
 
-ggplot(data = ipcc_nrc_counts, 
+ggplot(data = kr_nrc_counts, 
        aes(x = n, 
            y = sentiment)) +
   geom_col(fill = "slategray3") +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 6),             #x axis breaks
                      limits = c(0, 180),                             #x axis range
                      expand = c(0,0)) +
-  facet_wrap(~section) +
+  facet_wrap(~chapter) +
   labs(x = "wordcount",
-       caption = "Figure 2: Sentiment of words in each section of 2022 IPCC Climate Change Report.") +
+       caption = "Figure 4: Sentiment of words in each various chapters of The Kite RUnner.") +
   theme_minimal() +
   theme(axis.text = element_text(color = "black", size = 10),                   
         axis.title.x = element_text(color = "black", size = 10, face = "bold"),  
         axis.title.y = element_text(color = "black", size = 10, face = "bold",
                                     vjust = 2),           
-        plot.caption = element_text(hjust = -2, color = "black",
+        plot.caption = element_text(hjust = -1, color = "black",
                                     size = 10, face = "bold"))
 
 ```
